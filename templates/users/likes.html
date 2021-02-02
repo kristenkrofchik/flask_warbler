@@ -1,0 +1,24 @@
+{% extends 'users/detail.html' %}
+{% block user_details %}
+  <div class="col-sm-9">
+    <div class="row">
+
+      {% for liked_post in likes %}
+
+        <div class="col-lg-4 col-md-6 col-12">
+          <div class="card user-card">
+            <div class="card-inner">
+              <div class="card-contents">
+                <a href="/messages/{{ liked_post.id }}" class="card-link">
+                  <p>{{ liked_post.text }}</p>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      {% endfor %}
+
+    </div>
+  </div>
+{% endblock %}
