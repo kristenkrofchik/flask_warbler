@@ -1,6 +1,7 @@
 """User View tests."""
 
-#    FLASK_ENV=production python -m unittest test_user_views.py
+#
+#    FLASK_ENV=production python -m unittest test_message_views.py
 
 
 import os
@@ -9,21 +10,31 @@ from unittest import TestCase
 from models import db, connect_db, Message, User, Likes, Follows
 from bs4 import BeautifulSoup
 
+# BEFORE we import our app, let's set an environmental variable
+# to use a different database for tests (we need to do this
+# before we import our app, since that will have already
+# connected to the database
 
 os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
 
 
+# Now we can import app
+
 from app import app, CURR_USER_KEY
 
+# Create our tables (we do this here, so we only create the tables
+# once for all tests --- in each test, we'll delete the data
+# and create fresh new clean test data
 
 db.create_all()
 
+# Don't have WTForms use CSRF at all, since it's a pain to test
 
 app.config['WTF_CSRF_ENABLED'] = False
 
 
-class UserViewTestCase(TestCase):
-    """Test views for user."""
+class MessageViewTestCase(TestCase):
+    """Test views for messages."""
 
     def setUp(self):
         """Create test client, add sample data."""
@@ -39,13 +50,18 @@ class UserViewTestCase(TestCase):
                                     image_url=None)
         self.testuser_id = 8989
         self.testuser.id = self.testuser_id
-        
-        self.userb = User.signup("userb", "b@email.com", "bbb", None)
-        self.userb_id = 9090
-        self.userb.id = self.userb_id
+
+        self.u1 = User.signup("abc", "test1@test.com", "password", None)
+        self.u1_id = 778
+        self.u1.id = self.u1_id
+        self.u2 = User.signup("efg", "test2@test.com", "password", None)
+        self.u2_id = 884
+        self.u2.id = self.u2_id
+        self.u3 = User.signup("hij", "test3@test.com", "password", None)
+        self.u4 = User.signup("testing", "test4@test.com", "password", None)
 
         db.session.commit()
-    
+
     def tearDown(self):
         resp = super().tearDown()
         db.session.rollback()
@@ -56,49 +72,123 @@ class UserViewTestCase(TestCase):
             resp = c.get("/users")
 
             self.assertIn("@testuser", str(resp.data))
-            self.assertIn("@userb", str(resp.data))
+            self.assertIn("@abc", str(resp.data))
 
-    def test_user_homepage(self):
+    def test_user_show(self):
         with self.client as c:
             resp = c.get(f"/users/{self.testuser_id}")
 
             self.assertEqual(resp.status_code, 200)
+
             self.assertIn("@testuser", str(resp.data))
-            self.assertNotIn("@userb", str(resp.data))
 
-    def setup_like_tests(self):
-        m1 = Message(id=123, text="hey", user_id=self.testuser_id)
-        m2 = Message(id=456, text="yo", user_id=self.userb_id)
-
-        db.session.add(m1)
-        db.session.add(m2)
+    def setup_likes(self):
+        m1 = Message(text="why", user_id=self.testuser_id)
+        m2 = Message(text="don't you", user_id=self.testuser_id)
+        m3 = Message(id=9876, text="work for me?", user_id=self.u1_id)
+        db.session.add_all([m1, m2, m3])
         db.session.commit()
 
-        testuser_likes = Likes(user_id=self.testuser_id, message_id=456)
-        
-        db.session.add(testuser_likes)
+        l1 = Likes(user_id=self.testuser_id, message_id=9876)
+
+        db.session.add(l1)
         db.session.commit()
 
-    def test_show_likes(self):
-        self.setup_like_tests()
+    def test_user_show_with_likes(self):
+        self.setup_likes()
 
         with self.client as c:
             resp = c.get(f"/users/{self.testuser_id}")
 
             self.assertEqual(resp.status_code, 200)
+
+            self.assertIn("@testuser", str(resp.data))
+            soup = BeautifulSoup(str(resp.data), 'html.parser')
+            found = soup.find_all("li", {"class": "stat"})
+            self.assertEqual(len(found), 4)
+
+            """check for one like"""
+            self.assertIn("1", found[3].text)
 
     def test_add_like(self):
-        msg = Message(id=11111, text="Gummy Bear", user_id=self.userb)
-        db.session.add(msg)
+        m = Message(id=1984, text="The earth is round", user_id=self.u1_id)
+        db.session.add(m)
         db.session.commit()
 
         with self.client as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.testuser_id
 
-            resp = c.post("/messages/11111/like", follow_redirects=True)
+            resp = c.post("/messages/1984/like", follow_redirects=True)
             self.assertEqual(resp.status_code, 200)
 
-            likes = Likes.query.filter(Likes.message_id==11111).all()
+            likes = Likes.query.filter(Likes.message_id==1984).all()
             self.assertEqual(len(likes), 1)
-            self.assertEqual(likes[0].user_id, self.testuser_id)
+
+    def test_invalid_add_like(self):
+        m = Message(id=4242, text="Please work my friend. ILYSM", user_id=self.u1_id)
+        db.session.add(m)
+        db.session.commit()
+
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = c.post("/messages/4242/like", follow_redirects=True)
+        self.assertEqual(resp.status_code, 403)
+
+    def setup_followers(self):
+        f1 = Follows(user_being_followed_id=self.u1_id, user_following_id=self.testuser_id)
+        f2 = Follows(user_being_followed_id=self.u2_id, user_following_id=self.testuser_id)
+        f3 = Follows(user_being_followed_id=self.testuser_id, user_following_id=self.u1_id)
+
+        db.session.add_all([f1,f2,f3])
+        db.session.commit()
+
+    def test_user_show_with_follows(self):
+
+        self.setup_followers()
+
+        with self.client as c:
+            resp = c.get(f"/users/{self.testuser_id}")
+
+            self.assertEqual(resp.status_code, 200)
+
+            self.assertIn("@testuser", str(resp.data))
+            soup = BeautifulSoup(str(resp.data), 'html.parser')
+            found = soup.find_all("li", {"class": "stat"})
+            self.assertEqual(len(found), 4)
+
+            # Test for a count of 2 following
+            self.assertIn("2", found[1].text)
+
+            # Test for a count of 1 follower
+            self.assertIn("1", found[2].text)
+    
+    def test_show_following(self):
+
+        self.setup_followers()
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser_id
+
+            resp = c.get(f"/users/{self.testuser_id}/following")
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("@abc", str(resp.data))
+            self.assertNotIn("@hij", str(resp.data))
+
+    def test_show_followers(self):
+
+        self.setup_followers()
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser_id
+
+            resp = c.get(f"/users/{self.testuser_id}/followers")
+
+            self.assertIn("@abc", str(resp.data))
+            self.assertNotIn("@efg", str(resp.data))
+
+
+    
+
