@@ -1,13 +1,13 @@
 """Message model tests."""
 
-#    python -m unittest test_user_model.py
+#    python -m unittest test_message_model.py
 
 
 import os
 from unittest import TestCase
+from sqlalchemy import exc
 
 from models import db, User, Message, Follows, Likes
-#from sqlalchemy import exc
 
 
 os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
@@ -36,27 +36,25 @@ class MessageModelTestCase(TestCase):
         self.user = User.query.get(self.uid)
         self.client = app.test_client()
     
+    def tearDown(self):
+        res = super().tearDown()
+        db.session.rollback()
+        return res
+    
     def test_message_model(self):
         """Does basic model work?"""
 
-        u = User(
-            email="test@test.com",
-            username="testuser",
-            password="HASHED_PASSWORD"
-        )
-
         m = Message(
             text="This is a test.",
-            user_id=u.user_id
+            user_id=self.uid
         )
 
-        db.session.add(u)
         db.session.add(m)
         db.session.commit()
 
         # User should have no messages & no followers
-        self.assertEqual(len(u.messages), 1)
-        self.assertEqual(u.messages[0].text, "This is a test.")
+        self.assertEqual(len(self.user.messages), 1)
+        self.assertEqual(self.user.messages[0].text, "This is a test.")
 
     def test_message_likes(self):
         msg_1 = Message(
