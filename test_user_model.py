@@ -9,6 +9,7 @@ import os
 from unittest import TestCase
 
 from models import db, User, Message, Follows
+from sqlalchemy import exc
 
 # BEFORE we import our app, let's set an environmental variable
 # to use a different database for tests (we need to do this
@@ -113,6 +114,25 @@ class UserModelTestCase(TestCase):
         self.assertEqual(new_user.username, "newuser")
         self.assertEqual(new_user.email, "newuser@user.com")
         self.assertNotEqual(new_user.password, "new_password")
+
+    def invalid_user_signup(self):
+        new_user = User.signup(None, "newuser2@user.com", "new_password2", None)
+        uid = 1234
+        new_user.id = uid
+        
+        with self.assertRaises(exc.IntegrityError) as context:
+            db.session.commit()
+    
+    def valid_authenticate(self):
+        user = User.authenticate(self.u1.username, 'password1')
+        self.assertEqual(user.id, self.uid1)
+    
+    def invalid_username_authenticate(self):
+        self.assertFalse(User.authenticate('myusername', 'password1'))
+    
+    def invalid_password_autenticate(self):
+        self.assertFalse(User.authenticate(self.u1.username, "mypassword"))
+
 
 
 
