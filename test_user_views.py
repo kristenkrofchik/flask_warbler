@@ -1,13 +1,13 @@
 """User View tests."""
 
-#
 #    FLASK_ENV=production python -m unittest test_user_views.py
 
 
 import os
 from unittest import TestCase
 
-from models import db, connect_db, Message, User, Likes
+from models import db, connect_db, Message, User, Likes, Follows
+from bs4 import BeautifulSoup
 
 
 os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
