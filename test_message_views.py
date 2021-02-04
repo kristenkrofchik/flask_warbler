@@ -159,5 +159,20 @@ class MessageViewTestCase(TestCase):
 
             m = Message.query.get(1234)
             self.assertIsNotNone(m)
+    
+    def test_inauthentic_message_delete(self):
+
+        m = Message(
+            id=1234,
+            text="testing you",
+            user_id=self.testuser_id
+        )
+        db.session.add(m)
+        db.session.commit()
+
+        with self.client as c:
+            resp = c.post("/messages/1234/delete", follow_redirects=True)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized", str(resp.data))
 
 
