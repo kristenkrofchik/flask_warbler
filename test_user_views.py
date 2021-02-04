@@ -40,13 +40,9 @@ class UserViewTestCase(TestCase):
         self.testuser_id = 8989
         self.testuser.id = self.testuser_id
         
-        self.userb = User.signup(username="userb",
-                                 email="b@email.com",
-                                 password="bbb",
-                                 image_url = None)
+        self.userb = User.signup("userb", "b@email.com", "bbb", None)
         self.userb_id = 9090
         self.userb.id = self.userb_id
-
 
         db.session.commit()
     
@@ -78,9 +74,9 @@ class UserViewTestCase(TestCase):
         db.session.add(m2)
         db.session.commit()
 
-        testuser_likelist = Likes(user_id=self.testuser_id, message_id=456)
+        testuser_likes = Likes(user_id=self.testuser_id, message_id=456)
         
-        db.session.add(testuser_likelist)
+        db.session.add(testuser_likes)
         db.session.commit()
 
     def test_show_likes(self):

@@ -39,8 +39,8 @@ class MessageViewTestCase(TestCase):
     def setUp(self):
         """Create test client, add sample data."""
 
-        User.query.delete()
-        Message.query.delete()
+        db.drop_all()
+        db.create_all()
 
         self.client = app.test_client()
 
@@ -48,6 +48,9 @@ class MessageViewTestCase(TestCase):
                                     email="test@test.com",
                                     password="testuser",
                                     image_url=None)
+
+        self.testuser_id = 9999
+        self.testuser.id = self.testuser_id
 
         db.session.commit()
 
@@ -71,3 +74,32 @@ class MessageViewTestCase(TestCase):
 
             msg = Message.query.one()
             self.assertEqual(msg.text, "Hello")
+    
+    def test_no_add_messages(self):
+        with self.client as c:
+            resp = c.post("/messages/new", data={"text": "Do Not Work"}, follow_redirects=True)
+            self.assertEqual(resp.status_code, 200)
+        
+    
+    def test_add_no_session(self):
+        with self.client as c:
+            resp = c.post("/messages/new", data={"text": "Hello"}, follow_redirects=True)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized", str(resp.data))
+
+    def test_show_message(self):
+        new_msg = Message(id=2222, text="This one is fake.", user_id=9999)
+
+        db.session.add(new_msg)
+        db.session.commit()
+
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+            
+            new_msg = Message.query.get(2222)
+
+            resp = c.get(f'/messages/{new_msg.id}')
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn(new_msg.text, str(resp.data))
