@@ -27,9 +27,9 @@ class LoginForm(FlaskForm):
 class EditUserForm(FlaskForm):
     """Form for updating user profile"""
 
-    username = StringField('Username')
-    email = StringField('E-mail', validators=[Email()])
-    image_url = StringField('Profile Image URL')
-    header_image_url = StringField('Header Image URL')
-    bio = StringField('Bio')
-    password = PasswordField('Enter Your Password to Edit Profile', validators=[DataRequired()])
+    username = StringField('Username', validators=[DataRequired()])
+    email = StringField('E-mail', validators=[DataRequired(), Email()])
+    image_url = StringField('Optional Profile Image URL')
+    header_image_url = StringField('Optional Header Image URL')
+    bio = TextAreaField('Optional Bio')
+    password = PasswordField('Enter Your Password to Edit Profile', validators=[Length(min=6)])
