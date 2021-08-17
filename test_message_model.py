@@ -9,7 +9,7 @@ from sqlalchemy import exc
 
 from models import db, User, Message, Follows, Likes
 
-
+"""Set environment variable to use a different database for testing"""
 os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
 
 
@@ -30,7 +30,6 @@ class MessageModelTestCase(TestCase):
         self.uid = 4949
         user = User.signup('msgtestuser', 'testemail@email.com', 'testpassword', None)
         user.id = self.uid
-        db.session.add(user)
         db.session.commit()
     
         self.user = User.query.get(self.uid)
@@ -82,8 +81,6 @@ class MessageModelTestCase(TestCase):
         like_list = Likes.query.filter(Likes.user_id == uid).all()
         self.assertEqual(len(like_list), 1)
 
-        nolikes_list = Likes.query.filter(Likes.user_id == self.uid).all()
-        self.assertEqual(len(nolikes_list), 0)
 
 
       
