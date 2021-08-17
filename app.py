@@ -236,11 +236,12 @@ def profile():
 
 @app.route('/users/add_like/<int:msg_id>', methods=["POST"])
 def like_post(msg_id):
+    """Toggle liked message for logged in user"""
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    msg = Message.query.get(msg_id)
+    msg = Message.query.get_or_404(msg_id)
     if msg.user_id == g.user.id:
         return abort(403)
     
