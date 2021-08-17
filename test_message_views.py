@@ -74,11 +74,6 @@ class MessageViewTestCase(TestCase):
 
             msg = Message.query.one()
             self.assertEqual(msg.text, "Hello")
-    
-    def test_no_add_messages(self):
-        with self.client as c:
-            resp = c.post("/messages/new", data={"text": "Do Not Work"}, follow_redirects=True)
-            self.assertEqual(resp.status_code, 200)
         
     
     def test_add_no_session(self):
